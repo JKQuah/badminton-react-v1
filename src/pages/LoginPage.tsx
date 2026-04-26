@@ -60,12 +60,15 @@ export default function LoginPage() {
             <Input
               id="phone"
               type="tel"
-              placeholder="+60 12-345 6789"
+              placeholder="e.g. 0123456789"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               autoFocus
             />
+            <span className="text-xs text-muted-foreground">
+              No need for country code (+6), just your phone number!
+            </span>
           </div>
           <Button className="w-full" onClick={handleLogin} disabled={loading}>
             {loading ? "Signing in…" : "Sign In"}
