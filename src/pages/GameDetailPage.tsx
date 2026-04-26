@@ -69,7 +69,7 @@ export default function GameDetailPage() {
   } = useGame();
 
   const game = getGame(id ?? "");
-  const isHost = game?.hostId === user?.id;
+  const isHost = game?.hostPhone === user?.phone;
   const isParticipant = game?.participants.some((p) => p.userId === user?.id);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
