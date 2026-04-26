@@ -532,7 +532,7 @@ export default function GameDetailPage() {
                             Unpaid
                           </Badge>
                         )}
-                        {p.userId === user?.id && (
+                        {p.phone === user?.phone && (
                           <Switch
                             checked={p.hasPaid}
                             onCheckedChange={(checked) =>
