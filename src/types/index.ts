@@ -14,7 +14,7 @@ export interface Participant {
   joinedAt: string
 }
 
-export type GameStatus = 'open' | 'closed' | 'settled'
+export type GameStatus = 'ongoing' | 'open' | 'closed' | 'settled'
 
 export interface ReceiptItem {
   id: string
@@ -37,6 +37,9 @@ export interface GameSession {
   title: string
   venue: string
   date: string
+  startTime?: string
+  endTime?: string
+  maxPax?: number
   courtFee: number
   foodFee: number
   participants: Participant[]

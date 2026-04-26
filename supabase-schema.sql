@@ -17,10 +17,18 @@ create table if not exists games (
   food_fee           numeric     not null default 0,
   status             text        not null default 'open',
   participants       jsonb       not null default '[]'::jsonb,
+  start_time         text,
+  end_time           text,
+  max_pax            integer,
   payment_qr_image   text,
   food_receipt       jsonb,
   created_at         timestamptz not null default now()
 );
+
+-- If tables already exist, run these to add the columns:
+-- alter table games add column if not exists start_time text;
+-- alter table games add column if not exists end_time text;
+-- alter table games add column if not exists max_pax integer;
 
 -- Allow anon key full access (app uses custom phone-based auth, not Supabase Auth)
 alter table registered_players enable row level security;

@@ -16,13 +16,15 @@ import type { GameSession } from "@/types";
 import { LogOut } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
+  ongoing: "On-going",
   open: "Open",
   closed: "Closed",
   settled: "Settled",
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  open: "default",
+  ongoing: "default",
+  open: "secondary",
   closed: "secondary",
   settled: "outline",
 };
@@ -83,6 +85,7 @@ function GameCard({ game, userId }: { game: GameSession; userId: string }) {
               month: "short",
               day: "numeric",
             })}
+            {game.startTime && game.endTime && ` · ${game.startTime}–${game.endTime}`}
           </span>
           <span className="font-semibold text-green-600">
             {perPerson > 0
@@ -142,7 +145,7 @@ export default function HomePage() {
             <span className="text-2xl">🏸</span>
             <div>
               <p className="font-semibold leading-tight text-sm">
-                Badminton Fee
+                Badminton 🏸 Every Friday
               </p>
               <p className="text-xs text-muted-foreground leading-tight">
                 Hi, {user?.name}

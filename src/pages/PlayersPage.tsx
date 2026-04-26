@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   getRegistry,
@@ -35,9 +35,10 @@ export default function PlayersPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
-  const [removeTarget, setRemoveTarget] = useState<RegisteredPlayer | null>(
-    null,
-  );
+  const [removeTarget, setRemoveTarget] = useState<RegisteredPlayer | null>(null);
+  const [editTarget, setEditTarget] = useState<RegisteredPlayer | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   useEffect(() => {
     getRegistry().then(setPlayers);
@@ -62,6 +63,19 @@ export default function PlayersPage() {
     setNameInput("");
     setPhoneInput("");
     setAddOpen(false);
+  };
+
+  const handleEdit = async () => {
+    if (!editTarget) return;
+    const name = editName.trim();
+    const phone = editPhone.replace(/\D/g, "");
+    if (name.length < 2) { toast.error("Name must be at least 2 characters"); return; }
+    if (phone.length < 7) { toast.error("Enter a valid phone number"); return; }
+    if (phone !== editTarget.phone) await removePlayer(editTarget.phone);
+    await addPlayer(phone, name);
+    await refresh();
+    toast.success(`${name} updated`);
+    setEditTarget(null);
   };
 
   const handleRemove = async () => {
@@ -153,6 +167,14 @@ export default function PlayersPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground shrink-0"
+                        onClick={() => { setEditTarget(p); setEditName(p.name); setEditPhone(p.phone); }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
                         onClick={() => setRemoveTarget(p)}
                       >
@@ -206,6 +228,40 @@ export default function PlayersPage() {
               Cancel
             </Button>
             <Button onClick={handleAdd}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit player dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Player</DialogTitle>
+            <DialogDescription>Update name or phone number.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone Number</Label>
+              <Input
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleEdit()}
+              />
+              <p className="text-xs text-muted-foreground">Digits only are stored — dashes and spaces are ignored.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button onClick={handleEdit}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -27,6 +27,9 @@ type GameRow = {
   title: string
   venue: string
   date: string
+  start_time: string | null
+  end_time: string | null
+  max_pax: number | null
   court_fee: number
   food_fee: number
   status: string
@@ -44,6 +47,9 @@ function toDb(game: GameSession): GameRow {
     title: game.title,
     venue: game.venue,
     date: game.date,
+    start_time: game.startTime ?? null,
+    end_time: game.endTime ?? null,
+    max_pax: game.maxPax ?? null,
     court_fee: game.courtFee,
     food_fee: game.foodFee,
     status: game.status,
@@ -62,6 +68,9 @@ function fromDb(row: GameRow): GameSession {
     title: row.title,
     venue: row.venue,
     date: row.date,
+    startTime: row.start_time ?? undefined,
+    endTime: row.end_time ?? undefined,
+    maxPax: row.max_pax ?? undefined,
     courtFee: Number(row.court_fee),
     foodFee: Number(row.food_fee),
     status: row.status as GameStatus,
@@ -120,7 +129,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ...data,
       id: crypto.randomUUID(),
       participants: [],
-      status: 'open',
+      status: 'ongoing',
       createdAt: new Date().toISOString(),
     }
     setGames((prev) => [game, ...prev])

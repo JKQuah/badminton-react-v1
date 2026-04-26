@@ -17,8 +17,11 @@ const schema = z.object({
   title: z.string().min(3, 'Session name must be at least 3 characters'),
   venue: z.string().min(2, 'Venue is required'),
   date: z.string().min(1, 'Date is required'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
   courtFee: z.string().regex(/^\d*\.?\d*$/, 'Must be a number'),
   foodFee: z.string().regex(/^\d*\.?\d*$/, 'Must be a number'),
+  maxPax: z.string().regex(/^\d*$/, 'Must be a whole number').optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -42,8 +45,11 @@ export default function HostGamePage() {
       title: '',
       venue: '',
       date: today,
+      startTime: '',
+      endTime: '',
       courtFee: '0',
       foodFee: '0',
+      maxPax: '',
     },
   })
 
@@ -61,8 +67,11 @@ export default function HostGamePage() {
         title: values.title,
         venue: values.venue,
         date: values.date,
+        startTime: values.startTime,
+        endTime: values.endTime,
         courtFee: parseFloat(values.courtFee) || 0,
         foodFee: parseFloat(values.foodFee) || 0,
+        maxPax: values.maxPax ? parseInt(values.maxPax, 10) : undefined,
       })
       toast.success('Game session created!')
       navigate(`/game/${game.id}`)
@@ -114,12 +123,34 @@ export default function HostGamePage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  {...register('date')}
-                />
+                <Input id="date" type="date" {...register('date')} />
                 {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="startTime">Start Time</Label>
+                  <Input id="startTime" type="time" {...register('startTime')} />
+                  {errors.startTime && <p className="text-xs text-destructive">{errors.startTime.message}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="endTime">End Time</Label>
+                  <Input id="endTime" type="time" {...register('endTime')} />
+                  {errors.endTime && <p className="text-xs text-destructive">{errors.endTime.message}</p>}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="maxPax">Max Players (optional)</Label>
+                <Input
+                  id="maxPax"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 12"
+                  {...register('maxPax')}
+                />
+                {errors.maxPax && <p className="text-xs text-destructive">{errors.maxPax.message}</p>}
               </div>
             </CardContent>
           </Card>

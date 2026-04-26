@@ -38,11 +38,13 @@ import { toast } from "sonner";
 import type { GameStatus } from "@/types";
 import { FoodReceiptSection } from "@/components/FoodReceiptSection";
 import { ChevronLeft, RefreshCcw, UploadCloud } from "lucide-react";
+import { formatTime } from "@/utils/format-date";
 
 const STATUS_OPTIONS: { value: GameStatus; label: string }[] = [
-  { value: "open", label: "Open — accepting players" },
-  { value: "closed", label: "Closed — no more players" },
-  { value: "settled", label: "Settled — all paid" },
+  { value: "ongoing", label: "On-going — Game in progress" },
+  { value: "open", label: "Open — Accepting players" },
+  { value: "closed", label: "Closed — No more players" },
+  { value: "settled", label: "Settled — All paid" },
 ];
 
 export default function GameDetailPage() {
@@ -69,6 +71,12 @@ export default function GameDetailPage() {
   const [newPlayerPhone, setNewPlayerPhone] = useState("");
   const [courtFeeEdit, setCourtFeeEdit] = useState("");
   const [foodFeeEdit, setFoodFeeEdit] = useState("");
+  const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [venueEdit, setVenueEdit] = useState("");
+  const [dateEdit, setDateEdit] = useState("");
+  const [startTimeEdit, setStartTimeEdit] = useState("");
+  const [endTimeEdit, setEndTimeEdit] = useState("");
+  const [maxPaxEdit, setMaxPaxEdit] = useState("");
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   if (gamesLoading) {
@@ -145,6 +153,22 @@ export default function GameDetailPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleSaveDetails = () => {
+    if (!venueEdit.trim() || !dateEdit) {
+      toast.error("Venue and date are required");
+      return;
+    }
+    updateGame(game.id, {
+      venue: venueEdit.trim(),
+      date: dateEdit,
+      startTime: startTimeEdit,
+      endTime: endTimeEdit,
+      maxPax: maxPaxEdit ? parseInt(maxPaxEdit, 10) : undefined,
+    });
+    toast.success("Session details updated");
+    setEditDetailsOpen(false);
+  };
+
   const handleSaveFees = () => {
     const court = parseFloat(courtFeeEdit);
     const food = parseFloat(foodFeeEdit);
@@ -184,7 +208,7 @@ export default function GameDetailPage() {
               <SelectTrigger className="w-auto text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={"w-auto"}>
                 {STATUS_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
@@ -197,6 +221,67 @@ export default function GameDetailPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+        {/* Session Info Card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Session Info</CardTitle>
+              {isHost && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => {
+                    setVenueEdit(game.venue);
+                    setDateEdit(game.date);
+                    setStartTimeEdit(game.startTime ?? "");
+                    setEndTimeEdit(game.endTime ?? "");
+                    setMaxPaxEdit(game.maxPax ? String(game.maxPax) : "");
+                    setEditDetailsOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            <div className="flex gap-2 text-sm">
+              <span className="text-muted-foreground w-12 shrink-0">Venue</span>
+              <span className="font-medium">{game.venue}</span>
+            </div>
+            <div className="flex gap-2 text-sm">
+              <span className="text-muted-foreground w-12 shrink-0">Date</span>
+              <span className="font-medium">
+                {new Date(game.date).toLocaleDateString("en-MY", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+            {game.startTime && game.endTime && (
+              <div className="flex gap-2 text-sm">
+                <span className="text-muted-foreground w-12 shrink-0">
+                  Time
+                </span>
+                <span className="font-medium">
+                  {formatTime(game.startTime)} – {formatTime(game.endTime)}
+                </span>
+              </div>
+            )}
+            {game.maxPax && (
+              <div className="flex gap-2 text-sm">
+                <span className="text-muted-foreground w-12 shrink-0">
+                  Max
+                </span>
+                <span className="font-medium">{game.maxPax} players</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Fee Summary Card */}
         <Card>
           <CardHeader className="pb-3">
@@ -323,12 +408,14 @@ export default function GameDetailPage() {
               <div>
                 <CardTitle className="text-base">Players</CardTitle>
                 <CardDescription className="text-xs">
-                  {game.participants.length} participant
+                  {game.participants.length}
+                  {game.maxPax ? `/${game.maxPax}` : ""} participant
                   {game.participants.length !== 1 ? "s" : ""}
+                  {game.maxPax && game.participants.length >= game.maxPax ? " · Full" : ""}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                {!isParticipant && game.status === "open" && (
+                {!isParticipant && game.status === "open" && !(game.maxPax && game.participants.length >= game.maxPax) && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -485,6 +572,68 @@ export default function GameDetailPage() {
               Cancel
             </Button>
             <Button onClick={handleAddPlayer}>Add Player</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Session Details Dialog */}
+      <Dialog open={editDetailsOpen} onOpenChange={setEditDetailsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Session Details</DialogTitle>
+            <DialogDescription>Update venue, date and time</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Venue</Label>
+              <Input
+                value={venueEdit}
+                onChange={(e) => setVenueEdit(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={dateEdit}
+                onChange={(e) => setDateEdit(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={startTimeEdit}
+                  onChange={(e) => setStartTimeEdit(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={endTimeEdit}
+                  onChange={(e) => setEndTimeEdit(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Max Players (optional)</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 12"
+                value={maxPaxEdit}
+                onChange={(e) => setMaxPaxEdit(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDetailsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDetails}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
