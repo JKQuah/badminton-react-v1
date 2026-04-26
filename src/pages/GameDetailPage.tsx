@@ -35,9 +35,15 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import type { GameStatus } from "@/types";
+import type { GameStatus, Participant } from "@/types";
 import { FoodReceiptSection } from "@/components/FoodReceiptSection";
-import { ChevronLeft, RefreshCcw, UploadCloud } from "lucide-react";
+import {
+  ChevronLeft,
+  Crown,
+  Plus,
+  RefreshCcw,
+  UploadCloud,
+} from "lucide-react";
 import { formatTime } from "@/utils/format-date";
 
 const STATUS_OPTIONS: { value: GameStatus; label: string }[] = [
@@ -59,6 +65,7 @@ export default function GameDetailPage() {
     removeParticipant,
     markPaid,
     setPaymentQr,
+    transferHost,
   } = useGame();
 
   const game = getGame(id ?? "");
@@ -77,6 +84,9 @@ export default function GameDetailPage() {
   const [startTimeEdit, setStartTimeEdit] = useState("");
   const [endTimeEdit, setEndTimeEdit] = useState("");
   const [maxPaxEdit, setMaxPaxEdit] = useState("");
+  const [transferTarget, setTransferTarget] = useState<Participant | null>(
+    null,
+  );
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   if (gamesLoading) {
@@ -273,12 +283,28 @@ export default function GameDetailPage() {
             )}
             {game.maxPax && (
               <div className="flex gap-2 text-sm">
-                <span className="text-muted-foreground w-12 shrink-0">
-                  Max
-                </span>
+                <span className="text-muted-foreground w-12 shrink-0">Max</span>
                 <span className="font-medium">{game.maxPax} players</span>
               </div>
             )}
+            <Separator className="my-1" />
+            <div className="flex gap-2 text-sm">
+              <span className="text-muted-foreground w-12 shrink-0">Host</span>
+              <span className="font-medium">{game.hostName}</span>
+            </div>
+            {(() => {
+              const phone =
+                game.hostPhone ??
+                game.participants.find((p) => p.userId === game.hostId)?.phone;
+              return phone ? (
+                <div className="flex gap-2 text-sm">
+                  <span className="text-muted-foreground w-12 shrink-0">
+                    Phone
+                  </span>
+                  <span className="font-medium">{phone}</span>
+                </div>
+              ) : null;
+            })()}
           </CardContent>
         </Card>
 
@@ -411,27 +437,31 @@ export default function GameDetailPage() {
                   {game.participants.length}
                   {game.maxPax ? `/${game.maxPax}` : ""} participant
                   {game.participants.length !== 1 ? "s" : ""}
-                  {game.maxPax && game.participants.length >= game.maxPax ? " · Full" : ""}
+                  {game.maxPax && game.participants.length >= game.maxPax
+                    ? " · Full"
+                    : ""}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                {!isParticipant && game.status === "open" && !(game.maxPax && game.participants.length >= game.maxPax) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs h-7"
-                    onClick={handleJoinSelf}
-                  >
-                    Join
-                  </Button>
-                )}
+                {!isParticipant &&
+                  (game.status === "open" || game.status === "ongoing") &&
+                  !(game.maxPax && game.participants.length >= game.maxPax) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7"
+                      onClick={handleJoinSelf}
+                    >
+                      Join
+                    </Button>
+                  )}
                 {isHost && (
                   <Button
                     size="sm"
                     className="text-xs h-7"
                     onClick={() => setAddDialogOpen(true)}
                   >
-                    + Add Player
+                    <Plus size={16} /> Add New Friend
                   </Button>
                 )}
               </div>
@@ -489,6 +519,17 @@ export default function GameDetailPage() {
                             }
                             className="scale-75"
                           />
+                        )}
+                        {isHost && p.userId !== game.hostId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-amber-500"
+                            title="Make host"
+                            onClick={() => setTransferTarget(p)}
+                          >
+                            <Crown size={13} />
+                          </Button>
                         )}
                         {isHost && p.userId !== game.hostId && (
                           <Button
@@ -599,7 +640,7 @@ export default function GameDetailPage() {
                 onChange={(e) => setDateEdit(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-1.5">
                 <Label>Start Time</Label>
                 <Input
@@ -634,6 +675,42 @@ export default function GameDetailPage() {
               Cancel
             </Button>
             <Button onClick={handleSaveDetails}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer Host Dialog */}
+      <Dialog
+        open={!!transferTarget}
+        onOpenChange={(open) => {
+          if (!open) setTransferTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Transfer Host Role</DialogTitle>
+            <DialogDescription>
+              Make{" "}
+              <span className="font-semibold text-foreground">
+                {transferTarget?.name}
+              </span>{" "}
+              the new host? You will lose host controls.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!transferTarget) return;
+                transferHost(game.id, transferTarget);
+                toast.success(`${transferTarget.name} is now the host`);
+                setTransferTarget(null);
+              }}
+            >
+              Confirm
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

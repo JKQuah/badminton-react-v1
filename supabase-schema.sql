@@ -10,6 +10,7 @@ create table if not exists games (
   id                 uuid        primary key,
   host_id            text        not null,
   host_name          text        not null,
+  host_phone         text,
   title              text        not null,
   venue              text        not null,
   date               text        not null,
@@ -29,6 +30,7 @@ create table if not exists games (
 -- alter table games add column if not exists start_time text;
 -- alter table games add column if not exists end_time text;
 -- alter table games add column if not exists max_pax integer;
+-- alter table games add column if not exists host_phone text;
 
 -- Allow anon key full access (app uses custom phone-based auth, not Supabase Auth)
 alter table registered_players enable row level security;

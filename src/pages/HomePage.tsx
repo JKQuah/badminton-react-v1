@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GameSession } from "@/types";
-import { LogOut } from "lucide-react";
+import { LogOut, Rocket } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   ongoing: "On-going",
@@ -23,7 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  ongoing: "default",
+  ongoing: "success",
   open: "secondary",
   closed: "secondary",
   settled: "outline",
@@ -72,7 +72,7 @@ function GameCard({ game, userId }: { game: GameSession; userId: string }) {
               {game.venue}
             </CardDescription>
           </div>
-          <Badge variant={STATUS_VARIANT[game.status]}>
+          <Badge variant={STATUS_VARIANT[game.status]} className="font-bold">
             {STATUS_LABEL[game.status]}
           </Badge>
         </div>
@@ -85,7 +85,9 @@ function GameCard({ game, userId }: { game: GameSession; userId: string }) {
               month: "short",
               day: "numeric",
             })}
-            {game.startTime && game.endTime && ` · ${game.startTime}–${game.endTime}`}
+            {game.startTime &&
+              game.endTime &&
+              ` · ${game.startTime}–${game.endTime}`}
           </span>
           <span className="font-semibold text-green-600">
             {perPerson > 0
@@ -142,7 +144,9 @@ export default function HomePage() {
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🏸</span>
+            <span className="text-2xl">
+              <Rocket className="text-primary" />
+            </span>
             <div>
               <p className="font-semibold leading-tight text-sm">
                 Badminton 🏸 Every Friday
@@ -153,17 +157,17 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => navigate("/host")}>
+            <Button size="lg" onClick={() => navigate("/host")}>
               Host Game
             </Button>
             <Button
-              size="sm"
+              size="lg"
               variant="outline"
               onClick={() => navigate("/players")}
             >
               Players
             </Button>
-            <Button size="sm" variant="destructive" onClick={logout}>
+            <Button size="lg" variant="destructive" onClick={logout}>
               <LogOut size={16} />
             </Button>
           </div>

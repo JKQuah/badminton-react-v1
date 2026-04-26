@@ -34,6 +34,7 @@ export interface GameSession {
   id: string
   hostId: string
   hostName: string
+  hostPhone?: string
   title: string
   venue: string
   date: string

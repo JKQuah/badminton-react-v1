@@ -15,6 +15,7 @@ interface GameContextValue {
   updateReceiptItems: (gameId: string, items: ReceiptItem[]) => void
   toggleItemClaim: (gameId: string, itemId: string, userId: string) => void
   removeReceiptItem: (gameId: string, itemId: string) => void
+  transferHost: (gameId: string, participant: Participant) => void
   getGame: (id: string) => GameSession | undefined
 }
 
@@ -24,6 +25,7 @@ type GameRow = {
   id: string
   host_id: string
   host_name: string
+  host_phone: string | null
   title: string
   venue: string
   date: string
@@ -44,6 +46,7 @@ function toDb(game: GameSession): GameRow {
     id: game.id,
     host_id: game.hostId,
     host_name: game.hostName,
+    host_phone: game.hostPhone ?? null,
     title: game.title,
     venue: game.venue,
     date: game.date,
@@ -65,6 +68,7 @@ function fromDb(row: GameRow): GameSession {
     id: row.id,
     hostId: row.host_id,
     hostName: row.host_name,
+    hostPhone: row.host_phone ?? undefined,
     title: row.title,
     venue: row.venue,
     date: row.date,
@@ -125,17 +129,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }
 
   const createGame = (data: Omit<GameSession, 'id' | 'createdAt' | 'participants' | 'status'>): GameSession => {
+    const hostParticipant: Participant = {
+      userId: data.hostId,
+      name: data.hostName,
+      phone: data.hostPhone ?? '',
+      amountDue: 0,
+      hasPaid: false,
+      joinedAt: new Date().toISOString(),
+    }
     const game: GameSession = {
       ...data,
       id: crypto.randomUUID(),
-      participants: [],
+      participants: [hostParticipant],
       status: 'ongoing',
       createdAt: new Date().toISOString(),
     }
-    setGames((prev) => [game, ...prev])
-    void persist(game)
-    return game
+    const recalced = recalcParticipants(game)
+    setGames((prev) => [recalced, ...prev])
+    void persist(recalced)
+    return recalced
   }
+
+  const transferHost = (gameId: string, participant: Participant) =>
+    mutateGame(gameId, (g) => ({
+      ...g,
+      hostId: participant.userId,
+      hostName: participant.name,
+      hostPhone: participant.phone,
+    }))
 
   const updateGame = (id: string, updates: Partial<GameSession>) =>
     mutateGame(id, (g) => recalcParticipants({ ...g, ...updates }))
@@ -191,7 +212,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     <GameContext.Provider value={{
       games, gamesLoading, createGame, updateGame, addParticipant, removeParticipant,
       markPaid, setPaymentQr, setFoodReceipt, updateReceiptItems,
-      toggleItemClaim, removeReceiptItem, getGame,
+      toggleItemClaim, removeReceiptItem, transferHost, getGame,
     }}>
       {children}
     </GameContext.Provider>
