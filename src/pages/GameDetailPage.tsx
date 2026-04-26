@@ -235,7 +235,9 @@ export default function GameDetailPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Session Info</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Session Info
+              </CardTitle>
               {isHost && (
                 <Button
                   variant="outline"
@@ -312,7 +314,9 @@ export default function GameDetailPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Fee Summary</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Fee Summary
+              </CardTitle>
               {isHost && (
                 <Button
                   variant="outline"
@@ -364,7 +368,9 @@ export default function GameDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Payment Collection</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Payment Collection
+              </CardTitle>
               <Badge
                 variant={
                   paidCount === game.participants.length &&
@@ -432,7 +438,9 @@ export default function GameDetailPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Players</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Players
+                </CardTitle>
                 <CardDescription className="text-xs">
                   {game.participants.length}
                   {game.maxPax ? `/${game.maxPax}` : ""} participant
@@ -443,7 +451,7 @@ export default function GameDetailPage() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                {!isParticipant &&
+                {!isHost &&
                   (game.status === "open" || game.status === "ongoing") &&
                   !(game.maxPax && game.participants.length >= game.maxPax) && (
                     <Button
@@ -451,8 +459,9 @@ export default function GameDetailPage() {
                       variant="outline"
                       className="text-xs h-7"
                       onClick={handleJoinSelf}
+                      disabled={!!isParticipant}
                     >
-                      Join
+                      {isParticipant ? "Joined" : "Join"}
                     </Button>
                   )}
                 {isHost && (

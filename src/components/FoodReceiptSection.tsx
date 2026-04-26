@@ -140,7 +140,7 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base flex flex-row items-center gap-2">
-                <span>Food & Drinks</span>
+                <span className="font-semibold">Food & Drinks</span>
                 <Badge className="bg-purple-100 text-purple-800">BETA</Badge>
               </CardTitle>
               <CardDescription className="text-xs">
@@ -281,7 +281,9 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
 
                       <div className="shrink-0 text-right flex flex-row items-start gap-1">
                         <div className="flex items-baseline gap-0.5">
-                          <span className="text-xs text-muted-foreground">RM</span>
+                          <span className="text-xs text-muted-foreground">
+                            RM
+                          </span>
                           <input
                             key={item.price}
                             className="bg-transparent text-sm font-semibold w-16 outline-none text-right focus:underline decoration-dashed"
