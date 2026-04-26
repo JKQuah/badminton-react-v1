@@ -148,7 +148,7 @@ export default function GameDetailPage() {
       phone: user.phone,
       hasPaid: false,
     });
-    toast.success("You joined the game!");
+    toast.success("You joined the game! Welcome aboard 🏸");
   };
 
   const handleQrUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -451,7 +451,22 @@ export default function GameDetailPage() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
+                {!isHost && isParticipant && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7 text-destructive border-destructive/40 hover:bg-destructive/10"
+                    onClick={() => {
+                      if (!user) return;
+                      removeParticipant(game.id, user.id);
+                      toast.error("Walao, why ffk 😤");
+                    }}
+                  >
+                    Unjoin
+                  </Button>
+                )}
                 {!isHost &&
+                  !isParticipant &&
                   (game.status === "open" || game.status === "ongoing") &&
                   !(game.maxPax && game.participants.length >= game.maxPax) && (
                     <Button
@@ -459,20 +474,17 @@ export default function GameDetailPage() {
                       variant="outline"
                       className="text-xs h-7"
                       onClick={handleJoinSelf}
-                      disabled={!!isParticipant}
                     >
-                      {isParticipant ? "Joined" : "Join"}
+                      Join
                     </Button>
                   )}
-                {isHost && (
-                  <Button
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setAddDialogOpen(true)}
-                  >
-                    <Plus size={16} /> Add New Friend
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setAddDialogOpen(true)}
+                >
+                  <Plus size={16} /> Add New Friend
+                </Button>
               </div>
             </div>
           </CardHeader>
