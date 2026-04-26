@@ -58,7 +58,7 @@ export default function GameDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const {
-    getGame,
+    games,
     gamesLoading,
     updateGame,
     addParticipant,
@@ -68,7 +68,7 @@ export default function GameDetailPage() {
     transferHost,
   } = useGame();
 
-  const game = getGame(id ?? "");
+  const game = games.find((g) => g.id === id);
   const isHost = game?.hostPhone === user?.phone;
   const isParticipant = game?.participants.some((p) => p.userId === user?.id);
 
@@ -494,7 +494,7 @@ export default function GameDetailPage() {
                 No players yet
               </p>
             ) : (
-              <ScrollArea className="max-h-72">
+              <ScrollArea>
                 <div className="space-y-2">
                   {game.participants.map((p) => (
                     <div
@@ -621,12 +621,21 @@ export default function GameDetailPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Phone (optional)</Label>
+              <Label>
+                Phone{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
               <Input
                 placeholder="+60 12-345 6789"
                 value={newPlayerPhone}
                 onChange={(e) => setNewPlayerPhone(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Without a phone number, this player is recorded but cannot log
+                in.
+              </p>
             </div>
           </div>
           <DialogFooter>
