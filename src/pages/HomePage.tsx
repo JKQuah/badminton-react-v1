@@ -22,7 +22,10 @@ const STATUS_LABEL: Record<string, string> = {
   settled: "Settled",
 };
 
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
+const STATUS_VARIANT: Record<
+  string,
+  "default" | "secondary" | "outline" | "success"
+> = {
   ongoing: "success",
   open: "secondary",
   closed: "secondary",
