@@ -1,4 +1,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
+import ReactCrop, { type Crop, type PixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import { useGame } from "@/contexts/GameContext";
 import { scanReceipt, type ScanProgress } from "@/lib/receiptScanner";
 import type { GameSession, ReceiptItem } from "@/types";
@@ -29,6 +31,30 @@ import {
   UploadCloud,
 } from "lucide-react";
 
+async function getCroppedImg(
+  image: HTMLImageElement,
+  crop: PixelCrop,
+): Promise<string> {
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(crop.width * scaleX);
+  canvas.height = Math.round(crop.height * scaleY);
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(
+    image,
+    crop.x * scaleX,
+    crop.y * scaleY,
+    crop.width * scaleX,
+    crop.height * scaleY,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
 interface Props {
   game: GameSession;
   currentUserId: string;
@@ -37,10 +63,12 @@ interface Props {
 
 function foodCostForUser(game: GameSession, userId: string): number {
   if (!game.foodReceipt) return 0;
-  return game.foodReceipt.items.reduce((sum, item) => {
+  const raw = game.foodReceipt.items.reduce((sum, item) => {
     if (!item.claimedBy.includes(userId)) return sum;
-    return sum + Math.round((item.price / item.claimedBy.length) * 100) / 100;
+    return sum + item.price / item.claimedBy.length;
   }, 0);
+  const multiplier = 1 + (game.foodReceipt.serviceTaxPct ?? 0) / 100;
+  return Math.round(raw * multiplier * 100) / 100;
 }
 
 export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
@@ -49,6 +77,7 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
     toggleItemClaim,
     removeReceiptItem,
     updateReceiptItems,
+    setReceiptServiceTax,
   } = useGame();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,19 +88,33 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
   });
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+
   const receipt = game.foodReceipt;
   const participants = game.participants;
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
 
     const reader = new FileReader();
-    reader.onload = async (ev) => {
-      await runScan(ev.target?.result as string);
+    reader.onload = (ev) => {
+      setCropSrc(ev.target?.result as string);
+      setCrop(undefined);
+      setCompletedCrop(null);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCropConfirm = async () => {
+    if (!imgRef.current || !completedCrop) return;
+    const cropped = await getCroppedImg(imgRef.current, completedCrop);
+    setCropSrc(null);
+    await runScan(cropped);
   };
 
   const runScan = async (dataUrl: string) => {
@@ -124,14 +167,20 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
     updateReceiptItems(game.id, [...receipt.items, newItem]);
   };
 
-  const totalReceiptAmount =
-    receipt?.items.reduce((s, i) => s + i.price, 0) ?? 0;
-  const claimedTotal =
+  const TAX_PRESETS = [0, 6, 10, 16];
+  const serviceTaxPct = receipt?.serviceTaxPct ?? 0;
+  const taxMultiplier = 1 + serviceTaxPct / 100;
+
+  const subtotal = receipt?.items.reduce((s, i) => s + i.price, 0) ?? 0;
+  const taxAmount = Math.round(subtotal * (serviceTaxPct / 100) * 100) / 100;
+  const totalWithTax = Math.round(subtotal * taxMultiplier * 100) / 100;
+  const claimedSubtotal =
     receipt?.items.reduce(
       (s, i) => s + (i.claimedBy.length > 0 ? i.price : 0),
       0,
     ) ?? 0;
-  const unclaimedTotal = totalReceiptAmount - claimedTotal;
+  const unclaimedTotal =
+    Math.round((subtotal - claimedSubtotal) * taxMultiplier * 100) / 100;
 
   return (
     <>
@@ -212,9 +261,8 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
                   const isClaimed = item.claimedBy.includes(currentUserId);
                   const splitPrice =
                     item.claimedBy.length > 0
-                      ? Math.round((item.price / item.claimedBy.length) * 100) /
-                        100
-                      : item.price;
+                      ? Math.round((item.price / item.claimedBy.length) * taxMultiplier * 100) / 100
+                      : Math.round(item.price * taxMultiplier * 100) / 100;
                   const claimers = item.claimedBy
                     .map((uid) => participants.find((p) => p.userId === uid))
                     .filter(Boolean);
@@ -319,10 +367,42 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
                 <Plus className="w-3 h-3 mr-1" /> Add item
               </Button>
 
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    Service tax
+                  </span>
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {TAX_PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        // disabled={!isHost}
+                        onClick={() => setReceiptServiceTax(game.id, p)}
+                        className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                          serviceTaxPct === p
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "text-muted-foreground border-border hover:border-primary"
+                        } disabled:cursor-default`}
+                      >
+                        {p === 0 ? "None" : `${p}%`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Receipt total</span>
-                  <span>RM {totalReceiptAmount.toFixed(2)}</span>
+                  <span>Subtotal</span>
+                  <span>RM {subtotal.toFixed(2)}</span>
+                </div>
+                {serviceTaxPct > 0 && (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Tax ({serviceTaxPct}%)</span>
+                    <span>+ RM {taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-medium">
+                  <span>Total</span>
+                  <span>RM {totalWithTax.toFixed(2)}</span>
                 </div>
                 {unclaimedTotal > 0.005 && (
                   <div className="flex justify-between text-xs text-amber-600">
@@ -372,7 +452,7 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
                             <p className="text-[10px] text-muted-foreground">
                               Court RM {p.amountDue.toFixed(2)}
                               {foodCost > 0 &&
-                                ` + Food RM ${foodCost.toFixed(2)}`}
+                                ` + Food RM ${foodCost.toFixed(2)}${serviceTaxPct > 0 ? ` (incl. ${serviceTaxPct}% tax)` : ""}`}
                             </p>
                           </div>
                           <div className="text-right shrink-0">
@@ -434,6 +514,54 @@ export function FoodReceiptSection({ game, currentUserId, isHost }: Props) {
               className="w-full rounded-lg object-contain max-h-[70vh]"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!cropSrc}
+        onOpenChange={(open) => {
+          if (!open) setCropSrc(null);
+        }}
+      >
+        <DialogContent className="max-w-sm p-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle className="text-sm">Crop Receipt</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[60vh] bg-muted flex items-center justify-center">
+            {cropSrc && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+              >
+                <img
+                  ref={imgRef}
+                  src={cropSrc}
+                  alt="Crop preview"
+                  className="max-w-full"
+                />
+              </ReactCrop>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground text-center py-1">
+            Drag to select · Drag handles to resize
+          </p>
+          <div className="flex gap-2 p-4 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setCropSrc(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={!completedCrop}
+              onClick={handleCropConfirm}
+            >
+              <ScanBarcode className="w-4 h-4 mr-1.5" /> Crop & Scan
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

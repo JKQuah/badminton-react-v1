@@ -13,6 +13,7 @@ interface GameContextValue {
   setPaymentQr: (gameId: string, imageDataUrl: string) => void
   setFoodReceipt: (gameId: string, receipt: FoodReceipt) => void
   updateReceiptItems: (gameId: string, items: ReceiptItem[]) => void
+  setReceiptServiceTax: (gameId: string, pct: number) => void
   toggleItemClaim: (gameId: string, itemId: string, userId: string) => void
   removeReceiptItem: (gameId: string, itemId: string) => void
   transferHost: (gameId: string, participant: Participant) => void
@@ -188,6 +189,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const updateReceiptItems = (gameId: string, items: ReceiptItem[]) =>
     mutateGame(gameId, (g) => (g.foodReceipt ? { ...g, foodReceipt: { ...g.foodReceipt, items } } : g))
 
+  const setReceiptServiceTax = (gameId: string, pct: number) =>
+    mutateGame(gameId, (g) => (g.foodReceipt ? { ...g, foodReceipt: { ...g.foodReceipt, serviceTaxPct: pct } } : g))
+
   const toggleItemClaim = (gameId: string, itemId: string, userId: string) =>
     mutateGame(gameId, (g) => {
       if (!g.foodReceipt) return g
@@ -211,7 +215,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   return (
     <GameContext.Provider value={{
       games, gamesLoading, createGame, updateGame, addParticipant, removeParticipant,
-      markPaid, setPaymentQr, setFoodReceipt, updateReceiptItems,
+      markPaid, setPaymentQr, setFoodReceipt, updateReceiptItems, setReceiptServiceTax,
       toggleItemClaim, removeReceiptItem, transferHost, getGame,
     }}>
       {children}

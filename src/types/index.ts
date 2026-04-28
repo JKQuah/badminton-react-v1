@@ -28,6 +28,7 @@ export interface FoodReceipt {
   imageDataUrl: string
   items: ReceiptItem[]
   scannedAt: string
+  serviceTaxPct?: number
 }
 
 export interface GameSession {

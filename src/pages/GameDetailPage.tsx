@@ -128,10 +128,12 @@ export default function GameDetailPage() {
   const myFoodItems = (game.foodReceipt?.items ?? []).filter((item) =>
     item.claimedBy.includes(user?.id ?? ""),
   );
-  const myFoodTotal = myFoodItems.reduce(
-    (sum, item) => sum + item.price / Math.max(item.claimedBy.length, 1),
-    0,
-  );
+  const foodTaxMultiplier = 1 + (game.foodReceipt?.serviceTaxPct ?? 0) / 100;
+  const myFoodTotal =
+    myFoodItems.reduce(
+      (sum, item) => sum + item.price / Math.max(item.claimedBy.length, 1),
+      0,
+    ) * foodTaxMultiplier;
   const myTotal = (myParticipant?.amountDue ?? 0) + myFoodTotal;
 
   const handleAddPlayer = () => {
@@ -610,7 +612,9 @@ export default function GameDetailPage() {
         {isParticipant && !isHost && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Your Share</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Your Share
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
@@ -623,7 +627,11 @@ export default function GameDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
                     Food & Drinks ({myFoodItems.length} item
-                    {myFoodItems.length !== 1 ? "s" : ""})
+                    {myFoodItems.length !== 1 ? "s" : ""}
+                    {game.foodReceipt?.serviceTaxPct
+                      ? ` · ${game.foodReceipt.serviceTaxPct}% tax`
+                      : ""}
+                    )
                   </span>
                   <span>RM {myFoodTotal.toFixed(2)}</span>
                 </div>
