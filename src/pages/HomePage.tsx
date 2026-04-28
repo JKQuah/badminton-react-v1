@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGame } from "@/contexts/GameContext";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { useUnpaidNotification } from "@/hooks/useUnpaidNotification";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GameSession } from "@/types";
-import { LogOut, Rocket } from "lucide-react";
+import { Download, LogOut, Rocket, X } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   ongoing: "On-going",
@@ -138,6 +141,12 @@ export default function HomePage() {
   const { games, gamesLoading } = useGame();
   const navigate = useNavigate();
 
+  const { canInstall, triggerInstall } = useInstallPrompt();
+  useUnpaidNotification(games, user?.id);
+  const [installDismissed, setInstallDismissed] = useState(false);
+
+  const showInstallBanner = canInstall && !installDismissed;
+
   const sorted = [...games].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
@@ -176,6 +185,26 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      {showInstallBanner && (
+        <div className="max-w-lg mx-auto px-4 pt-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5 shadow-sm">
+            <Download className="w-4 h-4 shrink-0 text-primary" />
+            <span className="flex-1 text-xs">Add to home screen for quick access</span>
+            <div className="flex items-center gap-1">
+              <Button size="sm" className="h-7 text-xs" onClick={triggerInstall}>
+                Install
+              </Button>
+              <button
+                className="p-1 text-muted-foreground hover:text-foreground"
+                onClick={() => setInstallDismissed(true)}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-3">
         {gamesLoading ? (
