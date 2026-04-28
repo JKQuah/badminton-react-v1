@@ -87,6 +87,7 @@ export default function GameDetailPage() {
   const [transferTarget, setTransferTarget] = useState<Participant | null>(
     null,
   );
+  const [qrFullscreen, setQrFullscreen] = useState(false);
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   if (gamesLoading) {
@@ -122,6 +123,16 @@ export default function GameDetailPage() {
     game.participants.length > 0
       ? (paidCount / game.participants.length) * 100
       : 0;
+
+  const myParticipant = game.participants.find((p) => p.userId === user?.id);
+  const myFoodItems = (game.foodReceipt?.items ?? []).filter((item) =>
+    item.claimedBy.includes(user?.id ?? ""),
+  );
+  const myFoodTotal = myFoodItems.reduce(
+    (sum, item) => sum + item.price / Math.max(item.claimedBy.length, 1),
+    0,
+  );
+  const myTotal = (myParticipant?.amountDue ?? 0) + myFoodTotal;
 
   const handleAddPlayer = () => {
     if (newPlayerName.trim().length < 2) {
@@ -289,24 +300,31 @@ export default function GameDetailPage() {
                 <span className="font-medium">{game.maxPax} players</span>
               </div>
             )}
-            <Separator className="my-1" />
-            <div className="flex gap-2 text-sm">
-              <span className="text-muted-foreground w-12 shrink-0">Host</span>
-              <span className="font-medium">{game.hostName}</span>
-            </div>
-            {(() => {
-              const phone =
-                game.hostPhone ??
-                game.participants.find((p) => p.userId === game.hostId)?.phone;
-              return phone ? (
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/30">
+          <CardContent className="flex items-center gap-3">
+            <Avatar className="w-10 h-10 shrink-0">
+              <AvatarFallback>
+                {game.hostName.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-xs text-muted-foreground">Game hosted by</p>
+              <p className="text-sm font-semibold">{game.hostName}</p>
+              {game.hostPhone ? (
                 <div className="flex gap-2 text-sm">
-                  <span className="text-muted-foreground w-12 shrink-0">
-                    Phone
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {game.hostPhone}
                   </span>
-                  <span className="font-medium">{phone}</span>
                 </div>
-              ) : null;
-            })()}
+              ) : null}
+            </div>
+
+            <Badge variant="outline" className="ml-auto text-[10px]">
+              Host
+            </Badge>
           </CardContent>
         </Card>
 
@@ -419,15 +437,26 @@ export default function GameDetailPage() {
             )}
 
             {game.paymentQrImage && (
-              <div className="flex flex-col items-center gap-2 pt-1">
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => navigate(`/game/${game.id}/payment`)}
-                >
-                  View Payment QR →
-                </Button>
+              <div className="flex flex-col items-center gap-3 pt-1">
+                {/* <img
+                  src={game.paymentQrImage}
+                  alt="Payment QR"
+                  className="w-full h-auto object-contain rounded-lg border cursor-pointer"
+                  onClick={() => setQrFullscreen(true)}
+                /> */}
+                {isParticipant && !isHost && !myParticipant?.hasPaid && (
+                  <Button
+                    className="w-full"
+                    onClick={() => setQrFullscreen(true)}
+                  >
+                    Transfer Now · RM {myTotal.toFixed(2)}
+                  </Button>
+                )}
+                {isParticipant && !isHost && myParticipant?.hasPaid && (
+                  <p className="text-sm text-green-600 font-medium">
+                    ✓ Marked as paid
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
@@ -576,6 +605,48 @@ export default function GameDetailPage() {
           currentUserId={user?.id ?? ""}
           isHost={isHost}
         />
+
+        {/* Personal Payment Summary — non-host participants only */}
+        {isParticipant && !isHost && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Your Share</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Court + Shuttlecock
+                </span>
+                <span>RM {(myParticipant?.amountDue ?? 0).toFixed(2)}</span>
+              </div>
+              {myFoodItems.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Food & Drinks ({myFoodItems.length} item
+                    {myFoodItems.length !== 1 ? "s" : ""})
+                  </span>
+                  <span>RM {myFoodTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Total to Transfer</span>
+                <span className="font-bold text-green-600 text-lg">
+                  RM {myTotal.toFixed(2)}
+                </span>
+              </div>
+              {myParticipant?.hasPaid ? (
+                <div className="text-center text-sm text-green-600 font-medium py-1">
+                  ✓ Marked as paid
+                </div>
+              ) : !game.paymentQrImage ? (
+                <p className="text-xs text-muted-foreground text-center py-1">
+                  Host hasn't uploaded a payment QR yet
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Share Game */}
         {/* <Card>
@@ -790,6 +861,31 @@ export default function GameDetailPage() {
             </Button>
             <Button onClick={handleSaveFees}>Save</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Fullscreen Dialog */}
+      <Dialog open={qrFullscreen} onOpenChange={setQrFullscreen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Scan to Pay</DialogTitle>
+            <DialogDescription>
+              Transfer{" "}
+              <span className="font-semibold text-foreground">
+                RM {myTotal.toFixed(2)}
+              </span>{" "}
+              to {game.hostName}
+            </DialogDescription>
+          </DialogHeader>
+          {game.paymentQrImage && (
+            <div className="flex justify-center py-2">
+              <img
+                src={game.paymentQrImage}
+                alt="Payment QR"
+                className="w-full max-w-xs rounded-lg"
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

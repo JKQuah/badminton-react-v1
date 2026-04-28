@@ -134,7 +134,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       name: data.hostName,
       phone: data.hostPhone ?? '',
       amountDue: 0,
-      hasPaid: false,
+      hasPaid: true,
       joinedAt: new Date().toISOString(),
     }
     const game: GameSession = {
