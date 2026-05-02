@@ -40,7 +40,6 @@ self.addEventListener('message', (event) => {
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
       tag: 'unpaid-fees',
-      renotify: false,
       data: { url },
     })
   }
