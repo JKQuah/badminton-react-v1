@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import { GameProvider } from '@/contexts/GameContext'
+import { GameProvider, useGame } from '@/contexts/GameContext'
 import LoginPage from '@/pages/LoginPage'
 import HomePage from '@/pages/HomePage'
 import HostGamePage from '@/pages/HostGamePage'
 import GameDetailPage from '@/pages/GameDetailPage'
 import PaymentPage from '@/pages/PaymentPage'
 import PlayersPage from '@/pages/PlayersPage'
+import MaintenancePage from '@/pages/MaintenancePage'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user, isLoading } = useAuth()
+  const { connectionError } = useGame()
 
   if (isLoading) {
     return (
@@ -35,6 +37,8 @@ function AppRoutes() {
       </div>
     )
   }
+
+  if (connectionError) return <MaintenancePage />
 
   return (
     <Routes>

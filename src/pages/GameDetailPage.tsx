@@ -37,12 +37,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { GameStatus, Participant } from "@/types";
 import { FoodReceiptSection } from "@/components/FoodReceiptSection";
+import { getRegistry, type RegisteredPlayer } from "@/lib/playerRegistry";
 import {
+  CheckCircle2,
   ChevronLeft,
   Crown,
   Plus,
   RefreshCcw,
+  Search,
   UploadCloud,
+  Users,
 } from "lucide-react";
 import { formatTime } from "@/utils/format-date";
 
@@ -89,6 +93,40 @@ export default function GameDetailPage() {
   );
   const [qrFullscreen, setQrFullscreen] = useState(false);
   const qrInputRef = useRef<HTMLInputElement>(null);
+
+  const [registryOpen, setRegistryOpen] = useState(false);
+  const [registryPlayers, setRegistryPlayers] = useState<RegisteredPlayer[]>(
+    [],
+  );
+  const [registryLoading, setRegistryLoading] = useState(false);
+  const [registrySearch, setRegistrySearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const openRegistry = async () => {
+    setRegistryOpen(true);
+    setSelected(new Set());
+    setRegistrySearch("");
+    setRegistryLoading(true);
+    const players = await getRegistry();
+    setRegistryPlayers(players);
+    setRegistryLoading(false);
+  };
+
+  const handleAddFromRegistry = () => {
+    const toAdd = registryPlayers.filter((p) => selected.has(p.phone));
+    toAdd.forEach((p) =>
+      addParticipant(game!.id, {
+        userId: crypto.randomUUID(),
+        name: p.name,
+        phone: p.phone,
+        hasPaid: false,
+      }),
+    );
+    toast.success(
+      `Added ${toAdd.length} player${toAdd.length !== 1 ? "s" : ""}`,
+    );
+    setRegistryOpen(false);
+  };
 
   if (gamesLoading) {
     return (
@@ -384,86 +422,6 @@ export default function GameDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Payment Progress */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold">
-                Payment Collection
-              </CardTitle>
-              <Badge
-                variant={
-                  paidCount === game.participants.length &&
-                  game.participants.length > 0
-                    ? "default"
-                    : "secondary"
-                }
-              >
-                {paidCount}/{game.participants.length} paid
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={paidProgress} className="h-2" />
-            <p className="text-xs text-muted-foreground text-right">
-              RM {(paidCount * perPerson).toFixed(2)} / RM {totalFee.toFixed(2)}{" "}
-              collected
-            </p>
-
-            {/* QR Code Section */}
-            {isHost && (
-              <div className="pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs flex flex-row gap-2 items-center justify-center"
-                  onClick={() => qrInputRef.current?.click()}
-                >
-                  {game.paymentQrImage ? (
-                    <RefreshCcw size={14} />
-                  ) : (
-                    <UploadCloud size={14} />
-                  )}
-                  {game.paymentQrImage
-                    ? "Update Payment QR Code"
-                    : "Upload Your Payment QR Code"}
-                </Button>
-                <input
-                  ref={qrInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleQrUpload}
-                />
-              </div>
-            )}
-
-            {game.paymentQrImage && (
-              <div className="flex flex-col items-center gap-3 pt-1">
-                {/* <img
-                  src={game.paymentQrImage}
-                  alt="Payment QR"
-                  className="w-full h-auto object-contain rounded-lg border cursor-pointer"
-                  onClick={() => setQrFullscreen(true)}
-                /> */}
-                {isParticipant && !isHost && !myParticipant?.hasPaid && (
-                  <Button
-                    className="w-full"
-                    onClick={() => setQrFullscreen(true)}
-                  >
-                    Transfer Now · RM {myTotal.toFixed(2)}
-                  </Button>
-                )}
-                {isParticipant && !isHost && myParticipant?.hasPaid && (
-                  <p className="text-sm text-green-600 font-medium">
-                    ✓ Marked as paid
-                  </p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Participants */}
         <Card>
           <CardHeader className="pb-2">
@@ -509,6 +467,14 @@ export default function GameDetailPage() {
                       Join
                     </Button>
                   )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7"
+                  onClick={openRegistry}
+                >
+                  <Users size={14} /> From Registry
+                </Button>
                 <Button
                   size="sm"
                   className="text-xs h-7"
@@ -678,7 +644,216 @@ export default function GameDetailPage() {
             </div>
           </CardContent>
         </Card> */}
+
+        {/* Payment Progress */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold">
+                Payment Collection
+              </CardTitle>
+              <Badge
+                variant={
+                  paidCount === game.participants.length &&
+                  game.participants.length > 0
+                    ? "default"
+                    : "secondary"
+                }
+              >
+                {paidCount}/{game.participants.length} paid
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Progress value={paidProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground text-right">
+              RM {(paidCount * perPerson).toFixed(2)} / RM {totalFee.toFixed(2)}{" "}
+              collected
+            </p>
+
+            {/* QR Code Section */}
+            {isHost && (
+              <div className="pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs flex flex-row gap-2 items-center justify-center"
+                  onClick={() => qrInputRef.current?.click()}
+                >
+                  {game.paymentQrImage ? (
+                    <RefreshCcw size={14} />
+                  ) : (
+                    <UploadCloud size={14} />
+                  )}
+                  {game.paymentQrImage
+                    ? "Update Payment QR Code"
+                    : "Upload Your Payment QR Code"}
+                </Button>
+                <input
+                  ref={qrInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleQrUpload}
+                />
+              </div>
+            )}
+
+            {game.paymentQrImage && (
+              <div className="flex flex-col items-center gap-3 pt-1">
+                {/* <img
+                  src={game.paymentQrImage}
+                  alt="Payment QR"
+                  className="w-full h-auto object-contain rounded-lg border cursor-pointer"
+                  onClick={() => setQrFullscreen(true)}
+                /> */}
+                {isParticipant && !isHost && !myParticipant?.hasPaid && (
+                  <Button
+                    className="w-full"
+                    onClick={() => setQrFullscreen(true)}
+                  >
+                    Transfer Now · RM {myTotal.toFixed(2)}
+                  </Button>
+                )}
+                {isParticipant && !isHost && myParticipant?.hasPaid && (
+                  <p className="text-sm text-green-600 font-medium">
+                    ✓ Marked as paid
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
+
+      {/* Add from Registry Dialog */}
+      <Dialog open={registryOpen} onOpenChange={setRegistryOpen}>
+        <DialogContent className="max-w-sm flex flex-col max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Add from Registry</DialogTitle>
+            <DialogDescription>
+              Select players to add to this session
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search players…"
+              className="pl-8 h-8 text-sm"
+              value={registrySearch}
+              onChange={(e) => setRegistrySearch(e.target.value)}
+            />
+          </div>
+
+          <ScrollArea className="flex-1 -mx-1 px-1">
+            {registryLoading ? (
+              <div className="space-y-2 py-1">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-11 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              (() => {
+                const alreadyIn = new Set(
+                  game.participants.map((p) => p.phone),
+                );
+                const visible = registryPlayers.filter(
+                  (p) =>
+                    p.name
+                      .toLowerCase()
+                      .includes(registrySearch.toLowerCase()) ||
+                    p.phone.includes(registrySearch),
+                );
+                if (visible.length === 0)
+                  return (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      No players found
+                    </p>
+                  );
+                return (
+                  <div className="space-y-1 py-1">
+                    {visible.map((p) => {
+                      const joined = alreadyIn.has(p.phone);
+                      const isSelected = selected.has(p.phone);
+                      return (
+                        <button
+                          key={p.phone}
+                          disabled={joined}
+                          onClick={() => {
+                            if (joined) return;
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              next.has(p.phone)
+                                ? next.delete(p.phone)
+                                : next.add(p.phone);
+                              return next;
+                            });
+                          }}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                            joined
+                              ? "opacity-40 cursor-default bg-muted/30"
+                              : isSelected
+                                ? "bg-primary/10 border border-primary/30"
+                                : "hover:bg-muted/50 border border-transparent"
+                          }`}
+                        >
+                          <Avatar className="w-8 h-8 shrink-0">
+                            <AvatarFallback className="text-[10px]">
+                              {p.name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {p.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.phone.replace(
+                                /(\d{3})(\d+)(\d{4})/,
+                                "$1 $2 $3",
+                              )}
+                            </p>
+                          </div>
+                          {joined ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] shrink-0"
+                            >
+                              Joined
+                            </Badge>
+                          ) : isSelected ? (
+                            <CheckCircle2 className="w-4 h-4 rounded-full text-green-600 shrink-0" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/40 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()
+            )}
+          </ScrollArea>
+
+          <DialogFooter className="gap-2 pt-2 border-t">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setRegistryOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={selected.size === 0}
+              onClick={handleAddFromRegistry}
+            >
+              Add {selected.size > 0 ? `${selected.size} ` : ""}Player
+              {selected.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Player Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

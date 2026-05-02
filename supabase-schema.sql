@@ -38,3 +38,17 @@ create policy "anon full access" on registered_players for all to anon using (tr
 
 alter table games enable row level security;
 create policy "anon full access" on games for all to anon using (true) with check (true);
+
+-- Indexes
+-- games: main load query is SELECT * ORDER BY created_at DESC — index lets Postgres
+-- read rows in order directly instead of doing a full sequential scan + sort.
+create index if not exists idx_games_created_at
+  on games (created_at desc);
+
+-- registered_players: player list query is SELECT * ORDER BY name — index lets
+-- Postgres return rows pre-sorted without a separate sort step.
+create index if not exists idx_registered_players_name
+  on registered_players (name);
+
+-- Migration: run the two statements above in Supabase Dashboard → SQL Editor
+-- if the tables already exist and you are adding indexes to a live database.

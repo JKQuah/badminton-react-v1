@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 interface GameContextValue {
   games: GameSession[]
   gamesLoading: boolean
+  connectionError: boolean
   createGame: (game: Omit<GameSession, 'id' | 'createdAt' | 'participants' | 'status'>) => GameSession
   updateGame: (id: string, updates: Partial<GameSession>) => void
   addParticipant: (gameId: string, participant: Omit<Participant, 'amountDue' | 'joinedAt'>) => void
@@ -105,6 +106,7 @@ async function persist(game: GameSession) {
 export function GameProvider({ children }: { children: ReactNode }) {
   const [games, setGames] = useState<GameSession[]>([])
   const [gamesLoading, setGamesLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState(false)
 
   useEffect(() => {
     supabase
@@ -112,7 +114,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       .select('*')
       .order('created_at', { ascending: false })
       .then(({ data, error }) => {
-        if (error) console.error('Failed to load games:', error.message)
+        if (error) {
+          console.error('Failed to load games:', error.message)
+          setConnectionError(true)
+        }
         setGames((data ?? []).map(fromDb))
         setGamesLoading(false)
       })
@@ -214,7 +219,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   return (
     <GameContext.Provider value={{
-      games, gamesLoading, createGame, updateGame, addParticipant, removeParticipant,
+      games, gamesLoading, connectionError, createGame, updateGame, addParticipant, removeParticipant,
       markPaid, setPaymentQr, setFoodReceipt, updateReceiptItems, setReceiptServiceTax,
       toggleItemClaim, removeReceiptItem, transferHost, getGame,
     }}>
